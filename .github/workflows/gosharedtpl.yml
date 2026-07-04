@@ -1,0 +1,16 @@
+name: Go CI Pipeline
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  run-shared-pipeline:
+    # Points to your centralized template repository
+    uses: Prakashdurai/cicd-template/.github/workflows/go-ci-template.yml@main
+    with:
+      go-version: '1.25'
+      golangci-lint-version: 'v1.59' # Optional parameter override
