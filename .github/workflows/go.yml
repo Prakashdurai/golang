@@ -1,0 +1,92 @@
+name: Go CI Pipeline
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # ==========================================
+  # STAGE 1: BUILD
+  # ==========================================
+  build:
+    name: Build Stage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Build Application
+        run: |
+          env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o my-go-app main.go
+
+      # Share the entire workspace (including dependencies & compiled binary)
+      - name: Upload Workspace Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-workspace
+          path: . # Uploads everything in the current directory
+          retention-days: 1
+
+  # ==========================================
+  # STAGE 2: STATIC ANALYSIS (SA)
+  # ==========================================
+  static-analysis:
+    name: Static Analysis Stage
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      # Do NOT use actions/checkout here; download the workspace from Stage 1 instead
+      - name: Download Workspace Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: project-workspace
+          path: . # Extracts everything right back into the workspace
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: false # Disabled since we already passed the workspace
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.59
+          args: --timeout=5m
+          skip-cache: true # Prevents overriding the shared workspace state
+
+  # ==========================================
+  # STAGE 3: UNIT TEST (UT)
+  # ==========================================
+  unit-test:
+    name: Unit Test Stage
+    runs-on: ubuntu-latest
+    needs: static-analysis
+    steps:
+      # Download the workspace again
+      - name: Download Workspace Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: project-workspace
+          path: .
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Run Unit Tests
+        run: |
+          go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
