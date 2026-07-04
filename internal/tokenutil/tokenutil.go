@@ -8,25 +8,24 @@ import (
 	jwt "github.com/golang-jwt/jwt/v4"
 )
 
-func CreateAccessToken(user *domain.User, secret string, expiry int) (accessToken string, err error) {
-	ExpiresAt: jwt.NewNumericDate(
-		time.Now().Add(time.Hour * time.Duration(expiry)),
-	),
-	claims := &domain.JwtCustomClaims{
-		Name: user.Name,
-		ID:   user.ID.Hex(),
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(
-				time.Now().Add(time.Hour * time.Duration(expiry)),
-			),
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	t, err := token.SignedString([]byte(secret))
-	if err != nil {
-		return "", err
-	}
-	return t, err
+func CreateRefreshToken(user *domain.User, secret string, expiry int) (string, error) {
+    claims := &domain.JwtCustomRefreshClaims{
+        ID: user.ID.Hex(),
+        RegisteredClaims: jwt.RegisteredClaims{
+            ExpiresAt: jwt.NewNumericDate(
+                time.Now().Add(time.Hour * time.Duration(expiry)),
+            ),
+        },
+    }
+
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+    rt, err := token.SignedString([]byte(secret))
+    if err != nil {
+        return "", err
+    }
+
+    return rt, nil
 }
 
 func CreateRefreshToken(user *domain.User, secret string, expiry int) (refreshToken string, err error) {
