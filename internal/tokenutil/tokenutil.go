@@ -8,28 +8,29 @@ import (
 	jwt "github.com/golang-jwt/jwt/v4"
 )
 
-func CreateRefreshToken(user *domain.User, secret string, expiry int) (string, error) {
-    claims := &domain.JwtCustomRefreshClaims{
-        ID: user.ID.Hex(),
-        RegisteredClaims: jwt.RegisteredClaims{
-            ExpiresAt: jwt.NewNumericDate(
-                time.Now().Add(time.Hour * time.Duration(expiry)),
-            ),
-        },
-    }
+func CreateAccessToken(user *domain.User, secret string, expiry int) (string, error) {
+	claims := &domain.JwtCustomClaims{
+		Name: user.Name,
+		ID:   user.ID.Hex(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(
+				time.Now().Add(time.Hour * time.Duration(expiry)),
+			),
+		},
+	}
 
-    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-    rt, err := token.SignedString([]byte(secret))
-    if err != nil {
-        return "", err
-    }
+	t, err := token.SignedString([]byte(secret))
+	if err != nil {
+		return "", err
+	}
 
-    return rt, nil
+	return t, nil
 }
 
-func CreateRefreshToken(user *domain.User, secret string, expiry int) (refreshToken string, err error) {
-	claimsRefresh := &domain.JwtCustomRefreshClaims{
+func CreateRefreshToken(user *domain.User, secret string, expiry int) (string, error) {
+	claims := &domain.JwtCustomRefreshClaims{
 		ID: user.ID.Hex(),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(
@@ -37,12 +38,15 @@ func CreateRefreshToken(user *domain.User, secret string, expiry int) (refreshTo
 			),
 		},
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claimsRefresh)
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
 	rt, err := token.SignedString([]byte(secret))
 	if err != nil {
 		return "", err
 	}
-	return rt, err
+
+	return rt, nil
 }
 
 func IsAuthorized(requestToken string, secret string) (bool, error) {
